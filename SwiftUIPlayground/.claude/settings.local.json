@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xcodebuild -version)",
+      "Bash(find /Users/donnytimpsonjc/Sources/SwiftUIPlayground -name \"*.swift\" -type f -exec grep -l \"import\" {} \\\\;)",
+      "Bash(xcodebuild -list)",
+      "Bash(xcodebuild build *)",
+      "Bash(git -C /Users/donnytimpsonjc/Sources/SwiftUIPlayground status)",
+      "Bash(git -C /Users/donnytimpsonjc/Sources/SwiftUIPlayground log --oneline)",
+      "mcp__github__get_me",
+      "mcp__github__create_repository",
+      "Bash(git add *)"
+    ]
+  }
+}
