@@ -25,7 +25,7 @@ struct SwiftUIPlaygroundApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ItemListView()
         }
         .modelContainer(sharedModelContainer)
     }

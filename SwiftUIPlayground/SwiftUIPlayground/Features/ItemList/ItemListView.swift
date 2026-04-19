@@ -8,7 +8,7 @@
 import SwiftUI
 import SwiftData
 
-struct ContentView: View {
+struct ItemListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var items: [Item]
     @State private var isCreatingItem = false
@@ -53,6 +53,6 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ItemListView()
         .modelContainer(for: Item.self, inMemory: true)
 }
