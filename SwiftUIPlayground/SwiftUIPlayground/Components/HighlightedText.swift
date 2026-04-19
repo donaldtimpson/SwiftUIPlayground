@@ -4,11 +4,7 @@ struct HighlightedText: View {
     private let attributed: AttributedString
 
     init(_ text: String, highlight: String, highlightColor: Color = .accentColor) {
-        var attributed = AttributedString(text)
-        if !highlight.isEmpty, let range = attributed.range(of: highlight, options: .caseInsensitive) {
-            attributed[range].foregroundColor = highlightColor
-        }
-        self.attributed = attributed
+        attributed = AttributedString(text, highlight: highlight, highlightColor: highlightColor)
     }
 
     var body: some View {
