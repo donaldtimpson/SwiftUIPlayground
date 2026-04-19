@@ -13,6 +13,8 @@ extension Titleable {
 
 protocol EnumTitleable: CaseIterable, Titleable { }
 
+private let noneTitle = "None"
+
 // MARK: - ViewModel
 
 @Observable
@@ -23,21 +25,41 @@ final class EnumPickerViewModel<T: EnumTitleable> {
     let footer: String?
     let dismissOnSelection: Bool
     let doneTitle: String?
+    let isSearchable: Bool
     private(set) var isDoneEnabled: Bool
     var completion: ((T?) -> Void)?
 
-    init(title: String, selected: T?, showNone: Bool = false, dismissOnSelection: Bool = true, doneTitle: String? = nil, footer: String? = nil, completion: ((T?) -> Void)? = nil) {
+    init(
+        title: String,
+        selected: T?,
+        showNone: Bool = false,
+        dismissOnSelection: Bool = true,
+        isSearchable: Bool = true,
+        doneTitle: String? = nil,
+        footer: String? = nil,
+        completion: ((T?) -> Void)? = nil
+    ) {
         self.title = title
         self.selected = selected
         self.dismissOnSelection = dismissOnSelection
         self.doneTitle = doneTitle
         self.footer = footer
+        self.isSearchable = isSearchable
         self.completion = completion
 
         var items: [T?] = T.allCases.map { Optional($0) }
         if showNone { items.append(nil) }
         self.dataSource = items
         self.isDoneEnabled = selected != nil || showNone
+    }
+
+    func filtered(by searchText: String) -> [T?] {
+        guard !searchText.isEmpty else { return dataSource }
+        return dataSource.filter { item in
+            let titleMatch = (item?.titleText ?? noneTitle).localizedCaseInsensitiveContains(searchText)
+            let subtitleMatch = item?.subtitleText?.localizedCaseInsensitiveContains(searchText) ?? false
+            return titleMatch || subtitleMatch
+        }
     }
 
     func select(_ item: T?) {
@@ -55,40 +77,27 @@ final class EnumPickerViewModel<T: EnumTitleable> {
 struct EnumPickerView<T: EnumTitleable>: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: EnumPickerViewModel<T>
+    @State private var searchText = ""
 
     init(viewModel: EnumPickerViewModel<T>) {
         _viewModel = State(wrappedValue: viewModel)
     }
 
     var body: some View {
-        List {
-            Section {
-                ForEach(viewModel.dataSource.indices, id: \.self) { index in
-                    EnumPickerRow(
-                        title: viewModel.dataSource[index]?.titleText ?? "None",
-                        subtitle: viewModel.dataSource[index]?.subtitleText,
-                        isSelected: viewModel.dataSource[index] == viewModel.selected
-                    )
-                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        viewModel.select(viewModel.dataSource[index])
-                        if viewModel.dismissOnSelection && viewModel.doneTitle == nil {
-                            dismiss()
-                        }
-                    }
-                }
-            } footer: {
-                if let footer = viewModel.footer {
-                    Text(footer)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity)
-                }
+        let filtered = viewModel.filtered(by: searchText)
+
+        Group {
+            if viewModel.isSearchable {
+                pickerList(filtered: filtered)
+                    .searchable(text: $searchText, prompt: "Search")
+            } else {
+                pickerList(filtered: filtered)
             }
         }
-        .listStyle(.insetGrouped)
         .navigationTitle(viewModel.title)
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .toolbar {
             if let doneTitle = viewModel.doneTitle {
                 ToolbarItem(placement: .confirmationAction) {
@@ -106,6 +115,41 @@ struct EnumPickerView<T: EnumTitleable>: View {
             }
         }
     }
+
+    @ViewBuilder
+    private func pickerList(filtered: [T?]) -> some View {
+        List {
+            Section {
+                ForEach(filtered.indices, id: \.self) { index in
+                    EnumPickerRow(
+                        title: filtered[index]?.titleText ?? noneTitle,
+                        subtitle: filtered[index]?.subtitleText,
+                        isSelected: filtered[index] == viewModel.selected,
+                        searchText: searchText
+                    )
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.select(filtered[index])
+                        if viewModel.dismissOnSelection && viewModel.doneTitle == nil {
+                            dismiss()
+                        }
+                    }
+                }
+            } footer: {
+                if let footer = viewModel.footer {
+                    Text(footer)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+        }
+        #if os(iOS)
+        .listStyle(.insetGrouped)
+        #else
+        .listStyle(.inset)
+        #endif
+    }
 }
 
 // MARK: - Row
@@ -114,16 +158,16 @@ private struct EnumPickerRow: View {
     let title: String
     let subtitle: String?
     let isSelected: Bool
+    let searchText: String
 
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(highlighted(title, defaultColor: .primary))
                     .font(.body)
                 if let subtitle {
-                    Text(subtitle)
+                    Text(highlighted(subtitle, defaultColor: .secondary))
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
                 }
             }
             Spacer()
@@ -134,5 +178,15 @@ private struct EnumPickerRow: View {
             }
         }
         .frame(height: subtitle == nil ? 44 : 60)
+    }
+
+    private func highlighted(_ text: String, defaultColor: Color) -> AttributedString {
+        var attributed = AttributedString(text)
+        attributed.foregroundColor = defaultColor
+        guard !searchText.isEmpty, let range = attributed.range(of: searchText, options: .caseInsensitive) else {
+            return attributed
+        }
+        attributed[range].foregroundColor = .accentColor
+        return attributed
     }
 }
