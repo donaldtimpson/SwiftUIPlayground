@@ -163,11 +163,12 @@ private struct EnumPickerRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(highlighted(title, defaultColor: .primary))
+                HighlightedText(title, highlight: searchText)
                     .font(.body)
                 if let subtitle {
-                    Text(highlighted(subtitle, defaultColor: .secondary))
+                    HighlightedText(subtitle, highlight: searchText)
                         .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
             }
             Spacer()
@@ -178,15 +179,5 @@ private struct EnumPickerRow: View {
             }
         }
         .frame(height: subtitle == nil ? 44 : 60)
-    }
-
-    private func highlighted(_ text: String, defaultColor: Color) -> AttributedString {
-        var attributed = AttributedString(text)
-        attributed.foregroundColor = defaultColor
-        guard !searchText.isEmpty, let range = attributed.range(of: searchText, options: .caseInsensitive) else {
-            return attributed
-        }
-        attributed[range].foregroundColor = .accentColor
-        return attributed
     }
 }
